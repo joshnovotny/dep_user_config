@@ -9,11 +9,17 @@ Setup to use Jamf triggers to install apps and run scripts
 If using with less than 15 apps/scripts, need to delete corresponding entries from:
 
 • App Common Name
+
 • Path to check if app is already installed
+
 • Jamf Custom Trigger
+
 • Icon Path
+
 • Installing Text
+
 • Success Text
+
 • Installing Apps
 
 To verify scripts have run, I put this command at the end of the script if successful, then use it to verify within this script.
