@@ -26,6 +26,8 @@
 #############
 
 LOGGED_IN_USER=$(scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print $3 }')
+MODELID=$(system_profiler SPHardwareDataType | awk '/Identifier/ {print $3}')
+DATE=$(date)
 LOG_FOLDER="/private/var/log"
 LOG_NAME="enrollment.log"
 JAMF_BINARY="/usr/local/bin/jamf"
@@ -35,10 +37,10 @@ DIALOG_ICON="/path/to/icon"
 DIALOG_INITIAL_TITLE="Welcome to Organization!"
 DIALOG_INITIAL_MESSAGE="Please wait a few minutes while we set up your Mac.  \n  \nTo use organization provided technology you are required to adhere to the organization acceptable use policy. Full text of the policy can be found online at https://www.google.com"
 SUCCESSTITLE="Success!"
-SUCCESSICON="sf=checkmark.circle.fill color1=green weight=bold"
+SUCCESSICON="sf=checkmark.circle.fill color1=green weight=bold animation=pulse"
 SUCCESSDESC="Success! This window will close in 10 seconds"
 FAILTITLE="Process Failed"
-FAILICON="sf=xmark.octagon color=red weight=bold"
+FAILICON="sf=xmark.octagon color=red weight=bold animation=pulse"
 
 #################################################################
 # Determine if the network is up by looking for any non-loopback 
@@ -81,6 +83,8 @@ sleep 2
 ############################################
 
 LOGGED_IN_USER=$(scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print $3 }')
+REALNAME=$(id -P $(stat -f%Su /dev/console) | awk -F '[:]' '{print $8}')
+
     echo "$LOGGED_IN_USER has successfully logged on!"
 
 #################################################################################
@@ -111,8 +115,6 @@ then
 
     echo "Management user logged in. Not configuring for individual user."
     $DIALOG_APP  -t "Wipe and Re-enroll" -i "$FAILICON"  --iconsize 500 --centericon -m "admin cannot be the first user to log in. Wipe and re-enroll this Macbook" --messagealignment center --blurscreen
-    # Delete setup script
-    rm "/Library/Scripts/dep-user-config.sh"
     exit 0
 
 else
@@ -201,6 +203,46 @@ ICON13=""
 ICON14=""
 ICON15=""
 
+################################################
+# Transform Model Identifier to Marketing Name #
+################################################
+
+if [ "$MODELID" = "iMac17,1" ]; then
+    MODEL="iMac Intel (Retina 5k, 27-Inch, Late 2015)"
+
+elif [ "$MODELID" = "Mac13,1" ]; then
+    MODEL="Mac Studio"
+
+elif [ "$MODELID" = "Mac14,3" ]; then
+    MODEL="Mac mini (M2, 2023)"
+
+elif [ "$MODELID" = "Mac14,9" ]; then
+    MODEL="MacBook Pro (14-inch, M2 Pro, 2023)"
+
+elif [ "$MODELID" = "MacBookAir10,1" ]; then
+    MODEL="MacBook Air (M1, 2020)"
+
+elif [ "$MODELID" = "MacBookAir8,1" ]; then
+    MODEL="MacBook Air (Retina, 13-inch, 2018)"
+
+elif [ "$MODELID" = "MacBookAir9,1" ]; then
+    MODEL="MacBook Air (Retina, 13-inch, 2020)"
+
+elif [ "$MODELID" = "MacBookPro14,1" ]; then
+    MODEL="13-inch Retina MacBook Pro (Mid 2017)"
+
+elif [ "$MODELID" = "MacBookPro16,2" ]; then
+    MODEL="MacBook Pro (13-inch, 2020, Four Thunderbolt 3 ports)"
+
+elif [ "$MODELID" = "Macmini8,1" ]; then
+    MODEL="Mac mini (2018)"
+
+else
+
+    MODEL="Unknown, talk to the Apple Admin"
+    
+fi
+
 ###################
 # Installing Text #
 ###################
@@ -233,6 +275,7 @@ DIALOG_CMD=(
     "--title \"$DIALOG_INITIAL_TITLE\""
     "--icon \"$DIALOG_ICON\""
     "--message \"$DIALOG_INITIAL_MESSAGE\""
+    "--infobox 'Name: $REALNAME  \n Username: $LOGGED_IN_USER  \n \n Model: $MODEL \n \n Time started: $DATE'"
     "--position center"
     "--blurscreen"
     "--button1disabled"
@@ -296,7 +339,20 @@ dialog_finalise() {
     #rm "$PATH15"
     dialog_update "quit:"
     # If the script got this far, success!
-    $DIALOG_APP -t "$SUCCESSTITLE" -i "$SUCCESSICON" --iconsize 500 --centericon -m "$SUCCESSDESC" --messagefont size=30 --messagealignment center --blurscreen --width 80% --height 80% --quitkey x --timer 10
+
+$DIALOG_APP \
+        --title "$SUCCESSTITLE" \
+        --icon "$SUCCESSICON" \
+        --iconsize 500 \
+        --centericon \
+        --message "$SUCCESSDESC" \
+        --messagefont size=30 \
+        --messagealignment center \
+        --blurscreen \
+        --width 80% \
+        --height 80% \
+        --quitkey x \
+        --timer 10
 }
 
 get_json_value() {
